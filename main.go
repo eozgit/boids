@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"image/color"
 	_ "image/png"
 	"log"
 	"math"
 	"math/rand"
+	"strconv"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"gonum.org/v1/gonum/mat"
@@ -15,6 +18,9 @@ import (
 )
 
 var img *ebiten.Image
+var rdb *redis.Client
+
+var ctx = context.Background()
 
 func init() {
 	var err error
@@ -25,8 +31,14 @@ func init() {
 }
 
 type Boid struct {
-	position *mat.Dense
+	id       int
+	strId    string
 	velocity *mat.Dense
+}
+
+func (boid *Boid) getPosition() *mat.Dense {
+	pos := rdb.GeoPos(ctx, boid.strId, boid.strId).Val()[0]
+	return mat.NewDense(1, 2, []float64{pos.Latitude * 10, pos.Longitude * 10})
 }
 
 type Game struct {
@@ -35,7 +47,9 @@ type Game struct {
 
 func (g *Game) Update() error {
 	for _, boid := range g.boids {
-		boid.position.Add(boid.position, boid.velocity)
+		position := boid.getPosition()
+		position.Add(position, boid.velocity)
+		rdb.GeoAdd(ctx, boid.strId, &redis.GeoLocation{Name: boid.strId, Latitude: position.At(0, 0) / 10, Longitude: position.At(0, 1) / 10})
 	}
 	return nil
 }
@@ -58,7 +72,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		op.GeoM.Rotate(theta)
 
 		op.GeoM.Scale(.02, .02)
-		op.GeoM.Translate(boid.position.At(0, 0), boid.position.At(0, 1))
+		pos := boid.getPosition()
+		px := pos.At(0, 0)
+		py := pos.At(0, 1)
+		op.GeoM.Translate(px, py)
 		screen.DrawImage(img, op)
 	}
 }
@@ -70,11 +87,25 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
+	rdb = redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+
 	boids := []Boid{}
 	for i := 0; i < 10; i++ {
+		px := rand.Float64()*60 + 130
+		py := rand.Float64()*60 + 90
+		vx := rand.Float64() - .5
+		vy := rand.Float64() - .5
 		boid := Boid{
-			position: mat.NewDense(1, 2, []float64{rand.Float64()*60 + 130, rand.Float64()*60 + 90}),
-			velocity: mat.NewDense(1, 2, []float64{rand.Float64() - .5, rand.Float64() - .5}),
+			id:       i,
+			strId:    strconv.Itoa(i),
+			velocity: mat.NewDense(1, 2, []float64{vx, vy}),
+		}
+		cmd := rdb.GeoAdd(ctx, boid.strId, &redis.GeoLocation{Name: boid.strId, Latitude: px / 10, Longitude: py / 10})
+		er := cmd.Err()
+		if er != nil {
+			log.Println(er)
 		}
 		boids = append(boids, boid)
 	}
