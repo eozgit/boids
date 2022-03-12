@@ -13,7 +13,6 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"gonum.org/v1/gonum/mat"
 	"gonum.org/v1/gonum/num/quat"
 )
 
@@ -24,21 +23,10 @@ var ctx = context.Background()
 
 func init() {
 	var err error
-	img, _, err = ebitenutil.NewImageFromFile("navigation.png")
+	img, _, err = ebitenutil.NewImageFromFile("boid.png")
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-type Boid struct {
-	id       int
-	strId    string
-	velocity *mat.Dense
-}
-
-func (boid *Boid) getPosition() *mat.Dense {
-	pos := rdb.GeoPos(ctx, boid.strId, boid.strId).Val()[0]
-	return mat.NewDense(1, 2, []float64{pos.Latitude * 10, pos.Longitude * 10})
 }
 
 type Game struct {
@@ -48,8 +36,8 @@ type Game struct {
 func (g *Game) Update() error {
 	for _, boid := range g.boids {
 		position := boid.getPosition()
-		position.Add(position, boid.velocity)
-		rdb.GeoAdd(ctx, boid.strId, &redis.GeoLocation{Name: boid.strId, Latitude: position.At(0, 0) / 10, Longitude: position.At(0, 1) / 10})
+		newPosition := position.Add(boid.velocity)
+		boid.setPosition(newPosition)
 	}
 	return nil
 }
@@ -60,22 +48,19 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	for _, boid := range g.boids {
 		op := &ebiten.DrawImageOptions{}
 
-		oa := boid.velocity.At(0, 1) / boid.velocity.At(0, 0)
+		oa := boid.velocity.y / boid.velocity.x
 		q := quat.Number{Real: oa}
 		atan := quat.Atan(q)
 		theta := atan.Real
-		if boid.velocity.At(0, 0) > 0 {
+		if boid.velocity.x > 0 {
 			theta += math.Pi / 2
 		} else {
 			theta -= math.Pi / 2
 		}
 		op.GeoM.Rotate(theta)
 
-		op.GeoM.Scale(.02, .02)
-		pos := boid.getPosition()
-		px := pos.At(0, 0)
-		py := pos.At(0, 1)
-		op.GeoM.Translate(px, py)
+		position := boid.getPosition()
+		op.GeoM.Translate(position.x, position.y)
 		screen.DrawImage(img, op)
 	}
 }
@@ -100,13 +85,9 @@ func main() {
 		boid := Boid{
 			id:       i,
 			strId:    strconv.Itoa(i),
-			velocity: mat.NewDense(1, 2, []float64{vx, vy}),
+			velocity: &Vector{vx, vy},
 		}
-		cmd := rdb.GeoAdd(ctx, boid.strId, &redis.GeoLocation{Name: boid.strId, Latitude: px / 10, Longitude: py / 10})
-		er := cmd.Err()
-		if er != nil {
-			log.Println(er)
-		}
+		boid.setPosition(&Vector{px, py})
 		boids = append(boids, boid)
 	}
 
