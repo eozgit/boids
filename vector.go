@@ -6,6 +6,5 @@ type Vector struct {
 }
 
 func (v *Vector) Add(v2 *Vector) *Vector {
-	sum := &Vector{v.x + v2.x, v.y + v2.y}
-	return sum
+	return &Vector{v.x + v2.x, v.y + v2.y}
 }

@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/MadAppGang/kdbush"
@@ -14,6 +15,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"gonum.org/v1/gonum/num/quat"
 )
+
+var boidCount = 10
 
 var img *ebiten.Image
 var points []kdbush.Point
@@ -32,12 +35,24 @@ type Game struct {
 }
 
 func (g *Game) Update() error {
-	points = []kdbush.Point{}
+	var wg sync.WaitGroup
+	pointChan := make(chan kdbush.Point, boidCount)
 	for _, boid := range g.boids {
-		newPosition := boid.position.Add(boid.velocity)
-		boid.setPosition(newPosition)
+		wg.Add(1)
+		go func(b Boid) {
+			defer wg.Done()
+			newPosition := b.position.Add(b.velocity)
+			b.setPosition(newPosition)
+			pointChan <- &kdbush.SimplePoint{X: b.position.x, Y: b.position.y}
+		}(boid)
 	}
-	bush = kdbush.NewBush(points, len(g.boids))
+	wg.Wait()
+	close(pointChan)
+	points = []kdbush.Point{}
+	for point := range pointChan {
+		points = append(points, point)
+	}
+	bush = kdbush.NewBush(points, boidCount)
 	return nil
 }
 
@@ -70,24 +85,36 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	points = []kdbush.Point{}
+	pointChan := make(chan kdbush.Point, boidCount)
 
+	var wg sync.WaitGroup
 	boids := []Boid{}
-	for i := 0; i < 10; i++ {
-		px := rand.Float64()*60 + 130
-		py := rand.Float64()*60 + 90
-		vx := rand.Float64() - .5
-		vy := rand.Float64() - .5
-		boid := Boid{
-			id:       i,
-			strId:    strconv.Itoa(i),
-			position: &Vector{},
-			velocity: &Vector{vx, vy},
-		}
-		boid.setPosition(&Vector{px, py})
-		boids = append(boids, boid)
+	for i := 0; i < boidCount; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			px := rand.Float64()*60 + 130
+			py := rand.Float64()*60 + 90
+			vx := rand.Float64() - .5
+			vy := rand.Float64() - .5
+			boid := Boid{
+				id:       id,
+				strId:    strconv.Itoa(id),
+				position: &Vector{},
+				velocity: &Vector{vx, vy},
+			}
+			boid.setPosition(&Vector{px, py})
+			boids = append(boids, boid)
+			pointChan <- &kdbush.SimplePoint{X: px, Y: py}
+		}(i)
 	}
-	bush = kdbush.NewBush(points, len(boids))
+	wg.Wait()
+	close(pointChan)
+	points = []kdbush.Point{}
+	for point := range pointChan {
+		points = append(points, point)
+	}
+	bush = kdbush.NewBush(points, boidCount)
 
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Boids")
