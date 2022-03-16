@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"image/color"
 	_ "image/png"
 	"log"
@@ -10,16 +9,15 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/MadAppGang/kdbush"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"gonum.org/v1/gonum/num/quat"
 )
 
 var img *ebiten.Image
-var rdb *redis.Client
-
-var ctx = context.Background()
+var points []kdbush.Point
+var bush *kdbush.KDBush
 
 func init() {
 	var err error
@@ -34,11 +32,12 @@ type Game struct {
 }
 
 func (g *Game) Update() error {
+	points = []kdbush.Point{}
 	for _, boid := range g.boids {
-		position := boid.getPosition()
-		newPosition := position.Add(boid.velocity)
+		newPosition := boid.position.Add(boid.velocity)
 		boid.setPosition(newPosition)
 	}
+	bush = kdbush.NewBush(points, len(g.boids))
 	return nil
 }
 
@@ -59,8 +58,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		}
 		op.GeoM.Rotate(theta)
 
-		position := boid.getPosition()
-		op.GeoM.Translate(position.x, position.y)
+		op.GeoM.Translate(boid.position.x, boid.position.y)
 		screen.DrawImage(img, op)
 	}
 }
@@ -72,9 +70,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	rdb = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-	})
+	points = []kdbush.Point{}
 
 	boids := []Boid{}
 	for i := 0; i < 10; i++ {
@@ -85,11 +81,13 @@ func main() {
 		boid := Boid{
 			id:       i,
 			strId:    strconv.Itoa(i),
+			position: &Vector{},
 			velocity: &Vector{vx, vy},
 		}
 		boid.setPosition(&Vector{px, py})
 		boids = append(boids, boid)
 	}
+	bush = kdbush.NewBush(points, len(boids))
 
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Boids")

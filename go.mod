@@ -5,12 +5,13 @@ go 1.17
 require github.com/hajimehoshi/ebiten/v2 v2.2.5
 
 require (
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/go-redis/redis/v8 v8.11.4 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/stretchr/testify v1.5.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
+	github.com/MadAppGang/kdbush v0.0.0-20161230031607-ed6b87d35c48
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20210727001814-0db043d8d5be // indirect
 	github.com/jezek/xgb v0.0.0-20210312150743-0e0f116e1240 // indirect
 	golang.org/x/exp v0.0.0-20191002040644-a1355ae1e2c3 // indirect
