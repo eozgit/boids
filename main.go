@@ -1,10 +1,8 @@
 package main
 
 import (
-	"image/color"
 	_ "image/png"
 	"log"
-	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -13,7 +11,6 @@ import (
 	"github.com/MadAppGang/kdbush"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"gonum.org/v1/gonum/num/quat"
 )
 
 var boidCount = 10
@@ -30,65 +27,12 @@ func init() {
 	}
 }
 
-type Game struct {
-	boids []Boid
-}
-
-func (g *Game) Update() error {
-	var wg sync.WaitGroup
-	pointChan := make(chan kdbush.Point, boidCount)
-	for _, boid := range g.boids {
-		wg.Add(1)
-		go func(b Boid) {
-			defer wg.Done()
-			newPosition := b.position.Add(b.velocity)
-			b.setPosition(newPosition)
-			pointChan <- &kdbush.SimplePoint{X: b.position.x, Y: b.position.y}
-		}(boid)
-	}
-	wg.Wait()
-	close(pointChan)
-	points = []kdbush.Point{}
-	for point := range pointChan {
-		points = append(points, point)
-	}
-	bush = kdbush.NewBush(points, boidCount)
-	return nil
-}
-
-func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.White)
-
-	for _, boid := range g.boids {
-		op := &ebiten.DrawImageOptions{}
-
-		oa := boid.velocity.y / boid.velocity.x
-		q := quat.Number{Real: oa}
-		atan := quat.Atan(q)
-		theta := atan.Real
-		if boid.velocity.x > 0 {
-			theta += math.Pi / 2
-		} else {
-			theta -= math.Pi / 2
-		}
-		op.GeoM.Rotate(theta)
-
-		op.GeoM.Translate(boid.position.x, boid.position.y)
-		screen.DrawImage(img, op)
-	}
-}
-
-func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 320, 240
-}
-
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	pointChan := make(chan kdbush.Point, boidCount)
+	boidChan := make(chan Boid, boidCount)
 
 	var wg sync.WaitGroup
-	boids := []Boid{}
 	for i := 0; i < boidCount; i++ {
 		wg.Add(1)
 		go func(id int) {
@@ -104,15 +48,16 @@ func main() {
 				velocity: &Vector{vx, vy},
 			}
 			boid.setPosition(&Vector{px, py})
-			boids = append(boids, boid)
-			pointChan <- &kdbush.SimplePoint{X: px, Y: py}
+			boidChan <- boid
 		}(i)
 	}
 	wg.Wait()
-	close(pointChan)
+	close(boidChan)
+	boids := []Boid{}
 	points = []kdbush.Point{}
-	for point := range pointChan {
-		points = append(points, point)
+	for boid := range boidChan {
+		boids = append(boids, boid)
+		points = append(points, &kdbush.SimplePoint{X: boid.position.x, Y: boid.position.y})
 	}
 	bush = kdbush.NewBush(points, boidCount)
 
