@@ -13,6 +13,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
+var width, height = 320, 240
 var boidCount = 10
 
 var img *ebiten.Image
@@ -61,7 +62,7 @@ func main() {
 	}
 	bush = kdbush.NewBush(points, boidCount)
 
-	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowSize(width*2, height*2)
 	ebiten.SetWindowTitle("Boids")
 	if err := ebiten.RunGame(&Game{boids: boids}); err != nil {
 		log.Fatal(err)
