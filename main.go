@@ -17,7 +17,7 @@ import (
 const (
 	width     = 320
 	height    = 240
-	boidCount = 30
+	boidCount = 25
 )
 
 var (
@@ -70,10 +70,9 @@ func main() {
 			boid := &Boid{
 				id:       id,
 				strId:    strconv.Itoa(id),
-				position: &Vector{},
+				position: &Vector{px, py},
 				velocity: &Vector{vx, vy},
 			}
-			boid.setPosition(&Vector{px, py})
 			boid.calculateAngle()
 			boidChan <- boid
 		}(i)

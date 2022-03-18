@@ -24,18 +24,20 @@ func (g *Game) Update() error {
 	pointChan := make(chan kdbush.Point, boidCount)
 	for _, boid := range g.boids {
 		wg.Add(1)
+		var wgv sync.WaitGroup
+		velocityChan := make(chan *Vector, 2)
 		go func(b *Boid) {
 			defer wg.Done()
-			vHoming := getHomingVelocity(b.position)
-			vHoming.Scale(homingWeight)
-			vAlignment := getAlignmentVelocity(b)
-			vAlignment.Scale(alignmentWeight)
-			newVelocity := b.velocity.Add(vHoming).Add(vAlignment)
-			newVelocity.Limit(.5)
-			b.velocity.x = newVelocity.x
-			b.velocity.y = newVelocity.y
-			newPosition := b.position.Add(b.velocity)
-			b.setPosition(newPosition)
+			wgv.Add(2)
+			go getHomingVelocity(b.position, velocityChan, &wgv)
+			go getAlignmentVelocity(b, velocityChan, &wgv)
+			wgv.Wait()
+			close(velocityChan)
+			for velocity := range velocityChan {
+				b.velocity.Add(velocity)
+			}
+			b.velocity.Limit(.5)
+			b.position.Add(b.velocity)
 			b.calculateAngle()
 			pointChan <- &kdbush.SimplePoint{X: b.position.x, Y: b.position.y}
 		}(boid)
@@ -50,19 +52,25 @@ func (g *Game) Update() error {
 	return nil
 }
 
-func getAlignmentVelocity(boid *Boid) *Vector {
+func getAlignmentVelocity(boid *Boid, chanVelocity chan *Vector, wgv *sync.WaitGroup) {
+	defer wgv.Done()
 	arr := bush.Within(&kdbush.SimplePoint{X: boid.position.x, Y: boid.position.y}, alignmentRadius)
-	v := &Vector{}
+	vector := &Vector{}
 	for _, i := range arr {
-		v = v.Add(boids[i].velocity)
+		neighbour := boids[i]
+		if neighbour.id != boid.id {
+			vector.Add(neighbour.velocity)
+		}
 	}
 	l := float64(len(arr))
-	v.x = v.x / l
-	v.y = v.y / l
-	return v
+	vector.x = vector.x / l
+	vector.y = vector.y / l
+	vector.Scale(alignmentWeight)
+	chanVelocity <- vector
 }
 
-func getHomingVelocity(position *Vector) *Vector {
+func getHomingVelocity(position *Vector, chanVelocity chan *Vector, wgv *sync.WaitGroup) {
+	defer wgv.Done()
 	x, y := 0., 0.
 	fWidth, fHeight := float64(width), float64(height)
 	outOfBoundsLeft := position.x < 0
@@ -79,7 +87,9 @@ func getHomingVelocity(position *Vector) *Vector {
 	} else if outOfBoundsBottom {
 		y = -(position.y - fHeight) / fHeight
 	}
-	return &Vector{x, y}
+	vector := &Vector{x, y}
+	vector.Scale(homingWeight)
+	chanVelocity <- vector
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
