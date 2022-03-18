@@ -2,18 +2,18 @@ package main
 
 import (
 	"image/color"
-	"math"
 	"sync"
 
 	"github.com/MadAppGang/kdbush"
 	"github.com/hajimehoshi/ebiten/v2"
-	"gonum.org/v1/gonum/num/quat"
 )
 
 var homingWeight = .01
 
+var op = &ebiten.DrawImageOptions{}
+
 type Game struct {
-	boids []Boid
+	boids []*Boid
 }
 
 func (g *Game) Update() error {
@@ -21,7 +21,7 @@ func (g *Game) Update() error {
 	pointChan := make(chan kdbush.Point, boidCount)
 	for _, boid := range g.boids {
 		wg.Add(1)
-		go func(b Boid) {
+		go func(b *Boid) {
 			defer wg.Done()
 			vHoming := getHomingVelocity(b.position)
 			vHoming.Scale(homingWeight)
@@ -30,6 +30,7 @@ func (g *Game) Update() error {
 			b.velocity.y = newVelocity.y
 			newPosition := b.position.Add(b.velocity)
 			b.setPosition(newPosition)
+			b.calculateAngle()
 			pointChan <- &kdbush.SimplePoint{X: b.position.x, Y: b.position.y}
 		}(boid)
 	}
@@ -67,18 +68,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.White)
 
 	for _, boid := range g.boids {
-		op := &ebiten.DrawImageOptions{}
+		op.GeoM.Reset()
 
-		oa := boid.velocity.y / boid.velocity.x
-		q := quat.Number{Real: oa}
-		atan := quat.Atan(q)
-		theta := atan.Real
-		if boid.velocity.x > 0 {
-			theta += math.Pi / 2
-		} else {
-			theta -= math.Pi / 2
-		}
-		op.GeoM.Rotate(theta)
+		op.GeoM.Rotate(boid.angle)
 
 		op.GeoM.Translate(boid.position.x, boid.position.y)
 		screen.DrawImage(img, op)

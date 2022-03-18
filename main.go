@@ -13,12 +13,17 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
 
-var width, height = 320, 240
-var boidCount = 10
+const (
+	width     = 320
+	height    = 240
+	boidCount = 100
+)
 
-var img *ebiten.Image
-var points []kdbush.Point
-var bush *kdbush.KDBush
+var (
+	img    *ebiten.Image
+	points []kdbush.Point
+	bush   *kdbush.KDBush
+)
 
 func init() {
 	var err error
@@ -31,7 +36,7 @@ func init() {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	boidChan := make(chan Boid, boidCount)
+	boidChan := make(chan *Boid, boidCount)
 
 	var wg sync.WaitGroup
 	for i := 0; i < boidCount; i++ {
@@ -42,19 +47,20 @@ func main() {
 			py := rand.Float64()*60 + 90
 			vx := rand.Float64() - .5
 			vy := rand.Float64() - .5
-			boid := Boid{
+			boid := &Boid{
 				id:       id,
 				strId:    strconv.Itoa(id),
 				position: &Vector{},
 				velocity: &Vector{vx, vy},
 			}
 			boid.setPosition(&Vector{px, py})
+			boid.calculateAngle()
 			boidChan <- boid
 		}(i)
 	}
 	wg.Wait()
 	close(boidChan)
-	boids := []Boid{}
+	boids := []*Boid{}
 	points = []kdbush.Point{}
 	for boid := range boidChan {
 		boids = append(boids, boid)
