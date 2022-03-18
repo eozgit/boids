@@ -3,6 +3,7 @@ package main
 import (
 	_ "image/png"
 	"log"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -16,16 +17,17 @@ import (
 const (
 	width     = 320
 	height    = 240
-	boidCount = 100
+	boidCount = 30
 )
 
 var (
 	img    *ebiten.Image
+	boids  []*Boid
 	points []kdbush.Point
 	bush   *kdbush.KDBush
 )
 
-func init() {
+func loadImage() {
 	var err error
 	img, _, err = ebitenutil.NewImageFromFile("boid.png")
 	if err != nil {
@@ -33,8 +35,26 @@ func init() {
 	}
 }
 
+func randPostition(dim float64) float64 {
+	position := (rand.Float64() - .5) * dim
+	if position > 0 {
+		position += dim
+	}
+	return position
+}
+
+func randVelocity() float64 {
+	velocity := rand.Float64() - .5
+	if math.Abs(velocity) < .2 {
+		velocity *= 2
+	}
+	return velocity
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
+
+	loadImage()
 
 	boidChan := make(chan *Boid, boidCount)
 
@@ -43,10 +63,10 @@ func main() {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			px := rand.Float64()*60 + 130
-			py := rand.Float64()*60 + 90
-			vx := rand.Float64() - .5
-			vy := rand.Float64() - .5
+			px := randPostition(width)
+			py := randPostition(height)
+			vx := randVelocity()
+			vy := randVelocity()
 			boid := &Boid{
 				id:       id,
 				strId:    strconv.Itoa(id),
@@ -60,7 +80,7 @@ func main() {
 	}
 	wg.Wait()
 	close(boidChan)
-	boids := []*Boid{}
+	boids = []*Boid{}
 	points = []kdbush.Point{}
 	for boid := range boidChan {
 		boids = append(boids, boid)

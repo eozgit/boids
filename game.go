@@ -8,9 +8,12 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-var homingWeight = .01
-
-var op = &ebiten.DrawImageOptions{}
+var (
+	homingWeight    = .01
+	alignmentWeight = .002
+	alignmentRadius = 30.
+	op              = &ebiten.DrawImageOptions{}
+)
 
 type Game struct {
 	boids []*Boid
@@ -25,7 +28,10 @@ func (g *Game) Update() error {
 			defer wg.Done()
 			vHoming := getHomingVelocity(b.position)
 			vHoming.Scale(homingWeight)
-			newVelocity := b.velocity.Add(vHoming)
+			vAlignment := getAlignmentVelocity(b)
+			vAlignment.Scale(alignmentWeight)
+			newVelocity := b.velocity.Add(vHoming).Add(vAlignment)
+			newVelocity.Limit(.5)
 			b.velocity.x = newVelocity.x
 			b.velocity.y = newVelocity.y
 			newPosition := b.position.Add(b.velocity)
@@ -42,6 +48,18 @@ func (g *Game) Update() error {
 	}
 	bush = kdbush.NewBush(points, boidCount)
 	return nil
+}
+
+func getAlignmentVelocity(boid *Boid) *Vector {
+	arr := bush.Within(&kdbush.SimplePoint{X: boid.position.x, Y: boid.position.y}, alignmentRadius)
+	v := &Vector{}
+	for _, i := range arr {
+		v = v.Add(boids[i].velocity)
+	}
+	l := float64(len(arr))
+	v.x = v.x / l
+	v.y = v.y / l
+	return v
 }
 
 func getHomingVelocity(position *Vector) *Vector {
