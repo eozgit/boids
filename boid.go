@@ -6,7 +6,6 @@ import (
 
 type Boid struct {
 	id       int
-	strId    string
 	position *Vector
 	velocity *Vector
 	angle    float64

@@ -3,9 +3,7 @@ package main
 import (
 	_ "image/png"
 	"log"
-	"math"
 	"math/rand"
-	"strconv"
 	"sync"
 	"time"
 
@@ -44,11 +42,7 @@ func randPostition(dim float64) float64 {
 }
 
 func randVelocity() float64 {
-	velocity := rand.Float64() - .5
-	if math.Abs(velocity) < .2 {
-		velocity *= 2
-	}
-	return velocity
+	return rand.Float64() - .5
 }
 
 func main() {
@@ -69,7 +63,6 @@ func main() {
 			vy := randVelocity()
 			boid := &Boid{
 				id:       id,
-				strId:    strconv.Itoa(id),
 				position: &Vector{px, py},
 				velocity: &Vector{vx, vy},
 			}
