@@ -2,16 +2,12 @@ module github.com/eozgit/boids
 
 go 1.17
 
-require github.com/hajimehoshi/ebiten/v2 v2.2.5
-
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/stretchr/testify v1.5.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
+	github.com/dhconnelly/rtreego v1.1.0
+	github.com/hajimehoshi/ebiten/v2 v2.2.5
 )
 
 require (
-	github.com/MadAppGang/kdbush v0.0.0-20161230031607-ed6b87d35c48
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20210727001814-0db043d8d5be // indirect
 	github.com/jezek/xgb v0.0.0-20210312150743-0e0f116e1240 // indirect
 	golang.org/x/exp v0.0.0-20191002040644-a1355ae1e2c3 // indirect

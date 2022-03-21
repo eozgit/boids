@@ -1,18 +1,16 @@
 package main
 
 import (
+	"errors"
 	"image/color"
 	"sync"
 
-	"github.com/MadAppGang/kdbush"
+	"github.com/dhconnelly/rtreego"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
 var (
-	homingWeight    = .01
-	alignmentWeight = .002
-	alignmentRadius = 30.
-	op              = &ebiten.DrawImageOptions{}
+	op = &ebiten.DrawImageOptions{}
 )
 
 type Game struct {
@@ -21,7 +19,7 @@ type Game struct {
 
 func (g *Game) Update() error {
 	var wg sync.WaitGroup
-	pointChan := make(chan kdbush.Point, boidCount)
+	pointChan := make(chan rtreego.Spatial, boidCount)
 	for _, boid := range g.boids {
 		wg.Add(1)
 		go func(b *Boid) {
@@ -32,28 +30,66 @@ func (g *Game) Update() error {
 
 			b.position.Add(b.velocity)
 			b.calculateAngle()
-			pointChan <- &kdbush.SimplePoint{X: b.position.x, Y: b.position.y}
+			pointChan <- Point{rtreego.Point{b.position.x, b.position.y}, b}
 		}(boid)
 	}
 	wg.Wait()
 	close(pointChan)
-	points = []kdbush.Point{}
+	points = []rtreego.Spatial{}
 	for point := range pointChan {
 		points = append(points, point)
 	}
-	bush = kdbush.NewBush(points, boidCount)
+	rt = rtreego.NewTree(2, 5, 500, points...)
 	return nil
+}
+
+func (g *Game) getBoidById(id int) (*Boid, error) {
+	for _, boid := range g.boids {
+		if boid.id == id {
+			return boid, nil
+		}
+	}
+	return nil, errors.New("Boid not found.")
+}
+
+func setRGB(matrix *ebiten.ColorM, red int, green int, blue int) {
+	// Reset RGB (not Alpha) 0 forcibly
+	matrix.Scale(0, 0, 0, 1)
+
+	// Set color
+	r := float64(255) / 0xff
+	g := float64(0) / 0xff
+	b := float64(0) / 0xff
+	matrix.Translate(r, g, b, 0)
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.White)
 
+	b0, _ := g.getBoidById(0)
+	re := rtreego.Point{b0.position.x, b0.position.y}.ToRect(separationRange)
+	arr := rt.SearchIntersect(re)
+
 	for _, boid := range g.boids {
 		op.GeoM.Reset()
+		op.ColorM.Reset()
 
 		op.GeoM.Rotate(boid.angle)
 
 		op.GeoM.Translate(boid.position.x, boid.position.y)
+
+		if boid.id == 0 {
+			setRGB(&op.ColorM, 255, 0, 0)
+		} else {
+			for _, spa := range arr {
+				point := spa.(Point)
+				if boid.id == point.boid.id {
+					setRGB(&op.ColorM, 0, 255, 255)
+					break
+				}
+			}
+		}
+
 		screen.DrawImage(img, op)
 	}
 }

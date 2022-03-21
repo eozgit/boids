@@ -3,8 +3,9 @@ package main
 import "math"
 
 type Vector struct {
-	x float64
-	y float64
+	x           float64
+	y           float64
+	description string
 }
 
 func (v *Vector) Add(v2 *Vector) {
@@ -18,10 +19,14 @@ func (v *Vector) Scale(factor float64) {
 }
 
 func (v *Vector) Limit(max float64) {
-	speed := math.Sqrt(square(v.x) + square(v.y))
-	if speed > max {
-		v.Scale(max / speed)
+	magnitude := v.Magnitude()
+	if magnitude > max {
+		v.Scale(max / magnitude)
 	}
+}
+
+func (v *Vector) Magnitude() float64 {
+	return math.Sqrt(square(v.x) + square(v.y))
 }
 
 func square(x float64) float64 {

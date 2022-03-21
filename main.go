@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MadAppGang/kdbush"
+	"github.com/dhconnelly/rtreego"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 )
@@ -15,14 +15,14 @@ import (
 const (
 	width     = 320
 	height    = 240
-	boidCount = 25
+	boidCount = 50
 )
 
 var (
 	img    *ebiten.Image
 	boids  []*Boid
-	points []kdbush.Point
-	bush   *kdbush.KDBush
+	points []rtreego.Spatial
+	rt     *rtreego.Rtree
 )
 
 func loadImage() {
@@ -63,8 +63,8 @@ func main() {
 			vy := randVelocity()
 			boid := &Boid{
 				id:       id,
-				position: &Vector{px, py},
-				velocity: &Vector{vx, vy},
+				position: &Vector{px, py, "pos"},
+				velocity: &Vector{vx, vy, "vel"},
 			}
 			boid.calculateAngle()
 			boidChan <- boid
@@ -73,12 +73,12 @@ func main() {
 	wg.Wait()
 	close(boidChan)
 	boids = []*Boid{}
-	points = []kdbush.Point{}
+	points = []rtreego.Spatial{}
 	for boid := range boidChan {
 		boids = append(boids, boid)
-		points = append(points, &kdbush.SimplePoint{X: boid.position.x, Y: boid.position.y})
+		points = append(points, Point{rtreego.Point{boid.position.x, boid.position.y}, boid})
 	}
-	bush = kdbush.NewBush(points, boidCount)
+	rt = rtreego.NewTree(2, 5, 500, points...)
 
 	ebiten.SetWindowSize(width*2, height*2)
 	ebiten.SetWindowTitle("Boids")
