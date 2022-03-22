@@ -15,11 +15,12 @@ var (
 
 type Game struct {
 	boids []*Boid
+	rt    *rtreego.Rtree
 }
 
 func (g *Game) Update() error {
 	var wg sync.WaitGroup
-	pointChan := make(chan rtreego.Spatial, boidCount)
+	boidChan := make(chan *Boid, boidCount)
 	for _, boid := range g.boids {
 		wg.Add(1)
 		go func(b *Boid) {
@@ -28,18 +29,25 @@ func (g *Game) Update() error {
 			velocityCalc := VelocityCalculator{}
 			velocityCalc.calculate(b)
 
-			b.position.Add(b.velocity)
+			position := b.position()
+			position.Add(b.velocity)
+			b.Point = rtreego.Point{position.x, position.y}
 			b.calculateAngle()
-			pointChan <- Point{rtreego.Point{b.position.x, b.position.y}, b}
+			boidChan <- b
 		}(boid)
 	}
 	wg.Wait()
-	close(pointChan)
-	points = []rtreego.Spatial{}
-	for point := range pointChan {
-		points = append(points, point)
+	close(boidChan)
+
+	boids := []*Boid{}
+	points := []rtreego.Spatial{}
+	for boid := range boidChan {
+		boids = append(boids, boid)
+		points = append(points, *boid)
 	}
+	g.boids = boids
 	rt = rtreego.NewTree(2, 5, 500, points...)
+
 	return nil
 }
 
@@ -57,9 +65,9 @@ func setRGB(matrix *ebiten.ColorM, red int, green int, blue int) {
 	matrix.Scale(0, 0, 0, 1)
 
 	// Set color
-	r := float64(255) / 0xff
-	g := float64(0) / 0xff
-	b := float64(0) / 0xff
+	r := float64(red) / 0xff
+	g := float64(green) / 0xff
+	b := float64(blue) / 0xff
 	matrix.Translate(r, g, b, 0)
 }
 
@@ -67,7 +75,8 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.White)
 
 	b0, _ := g.getBoidById(0)
-	re := rtreego.Point{b0.position.x, b0.position.y}.ToRect(separationRange)
+	b0pos := b0.position()
+	re := rtreego.Point{b0pos.x, b0pos.y}.ToRect(separationRange)
 	arr := rt.SearchIntersect(re)
 
 	for _, boid := range g.boids {
@@ -76,15 +85,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 		op.GeoM.Rotate(boid.angle)
 
-		op.GeoM.Translate(boid.position.x, boid.position.y)
+		position := boid.position()
+		op.GeoM.Translate(position.x, position.y)
 
 		if boid.id == 0 {
 			setRGB(&op.ColorM, 255, 0, 0)
 		} else {
 			for _, spa := range arr {
-				point := spa.(Point)
-				if boid.id == point.boid.id {
-					setRGB(&op.ColorM, 0, 255, 255)
+				b := spa.(Boid)
+				if boid.id == b.id {
+					setRGB(&op.ColorM, 0, 255, 0)
 					break
 				}
 			}

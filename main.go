@@ -19,10 +19,8 @@ const (
 )
 
 var (
-	img    *ebiten.Image
-	boids  []*Boid
-	points []rtreego.Spatial
-	rt     *rtreego.Rtree
+	img *ebiten.Image
+	rt  *rtreego.Rtree
 )
 
 func loadImage() {
@@ -63,8 +61,8 @@ func main() {
 			vy := randVelocity()
 			boid := &Boid{
 				id:       id,
-				position: &Vector{px, py, "pos"},
 				velocity: &Vector{vx, vy, "vel"},
+				Point:    rtreego.Point{px, py},
 			}
 			boid.calculateAngle()
 			boidChan <- boid
@@ -72,11 +70,11 @@ func main() {
 	}
 	wg.Wait()
 	close(boidChan)
-	boids = []*Boid{}
-	points = []rtreego.Spatial{}
+	boids := []*Boid{}
+	points := []rtreego.Spatial{}
 	for boid := range boidChan {
 		boids = append(boids, boid)
-		points = append(points, Point{rtreego.Point{boid.position.x, boid.position.y}, boid})
+		points = append(points, *boid)
 	}
 	rt = rtreego.NewTree(2, 5, 500, points...)
 
