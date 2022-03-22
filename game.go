@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"image/color"
+	"math/rand"
 	"sync"
 
 	"github.com/dhconnelly/rtreego"
@@ -10,7 +11,9 @@ import (
 )
 
 var (
-	op = &ebiten.DrawImageOptions{}
+	boidCount = 50
+	op        = &ebiten.DrawImageOptions{}
+	rt        *rtreego.Rtree
 )
 
 type Game struct {
@@ -21,21 +24,42 @@ type Game struct {
 func (g *Game) Update() error {
 	var wg sync.WaitGroup
 	boidChan := make(chan *Boid, boidCount)
-	for _, boid := range g.boids {
-		wg.Add(1)
-		go func(b *Boid) {
-			defer wg.Done()
+	wg.Add(boidCount)
 
-			velocityCalc := VelocityCalculator{}
-			velocityCalc.calculate(b)
+	actualCount := len(g.boids)
+	for i := 0; i < boidCount; i++ {
+		if i >= actualCount {
+			go func(id int) {
+				defer wg.Done()
+				px := randPostition(width)
+				py := randPostition(height)
+				vx := randVelocity()
+				vy := randVelocity()
+				boid := &Boid{
+					id:       id,
+					velocity: &Vector{vx, vy, "vel"},
+					Point:    rtreego.Point{px, py},
+				}
+				boid.calculateAngle()
+				boidChan <- boid
+			}(i)
+		} else {
+			boid := g.boids[i]
+			go func(b *Boid) {
+				defer wg.Done()
 
-			position := b.position()
-			position.Add(b.velocity)
-			b.Point = rtreego.Point{position.x, position.y}
-			b.calculateAngle()
-			boidChan <- b
-		}(boid)
+				velocityCalc := VelocityCalculator{}
+				velocityCalc.calculate(b)
+
+				position := b.position()
+				position.Add(b.velocity)
+				b.Point = rtreego.Point{position.x, position.y}
+				b.calculateAngle()
+				boidChan <- b
+			}(boid)
+		}
 	}
+
 	wg.Wait()
 	close(boidChan)
 
@@ -106,4 +130,16 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return width, height
+}
+
+func randPostition(dim float64) float64 {
+	position := (rand.Float64() - .5) * dim
+	if position > 0 {
+		position += dim
+	}
+	return position
+}
+
+func randVelocity() float64 {
+	return rand.Float64() - .5
 }
