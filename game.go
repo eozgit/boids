@@ -23,10 +23,10 @@ type Game struct {
 
 func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
-	px := randPostition(width)
-	py := randPostition(height)
-	vx := randVelocity()
-	vy := randVelocity()
+	px := rand.Float64() * width
+	py := rand.Float64() * height
+	vx := rand.Float64() - .5
+	vy := rand.Float64() - .5
 	boid := &Boid{
 		id:       id,
 		velocity: &Vector{vx, vy, "vel"},
@@ -44,9 +44,25 @@ func updateBoid(b *Boid, boidChan chan *Boid, wg *sync.WaitGroup) {
 
 	position := b.position()
 	position.Add(b.velocity)
+	Wrap(position)
 	b.Point = rtreego.Point{position.x, position.y}
 	b.calculateAngle()
 	boidChan <- b
+}
+
+func Wrap(position *Vector) {
+	switch {
+	case position.x < 0:
+		position.x += fWidth
+	case position.x > fWidth:
+		position.x -= fWidth
+	}
+	switch {
+	case position.y < 0:
+		position.y += fHeight
+	case position.y > fHeight:
+		position.y -= fHeight
+	}
 }
 
 func (g *Game) Update() error {
@@ -134,16 +150,4 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return width, height
-}
-
-func randPostition(dim float64) float64 {
-	position := (rand.Float64() - .5) * dim
-	if position > 0 {
-		position += dim
-	}
-	return position
-}
-
-func randVelocity() float64 {
-	return rand.Float64() - .5
 }

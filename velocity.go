@@ -8,8 +8,7 @@ import (
 )
 
 const (
-	maxVel                 = .6
-	velocityComponentCount = 3
+	maxVel = .6
 )
 
 var (
@@ -20,6 +19,8 @@ var (
 	homingWeight     = .016
 )
 
+type velocityMethod func()
+
 type VelocityCalculator struct {
 	boid         *Boid
 	wg           *sync.WaitGroup
@@ -29,12 +30,14 @@ type VelocityCalculator struct {
 func (ops *VelocityCalculator) calculate(boid *Boid) {
 	ops.boid = boid
 	ops.wg = &sync.WaitGroup{}
-	ops.velocityChan = make(chan *Vector, velocityComponentCount)
+	velocityMethods := []velocityMethod{ops.separation, ops.alignment}
+	velocityMethodCount := len(velocityMethods)
+	ops.velocityChan = make(chan *Vector, velocityMethodCount)
 
-	ops.wg.Add(velocityComponentCount)
-	go ops.separation()
-	go ops.alignment()
-	go ops.homing()
+	ops.wg.Add(velocityMethodCount)
+	for _, velocityMethod := range velocityMethods {
+		velocityMethod()
+	}
 	ops.wg.Wait()
 	close(ops.velocityChan)
 	for velocity := range ops.velocityChan {
@@ -81,28 +84,4 @@ func (ops *VelocityCalculator) alignment() {
 	avgVelNei.Scale(1 / float64(len(arr)))
 	avgVelNei.Scale(alignmentWeight)
 	ops.velocityChan <- avgVelNei
-}
-
-func (ops *VelocityCalculator) homing() {
-	defer ops.wg.Done()
-	position := ops.boid.position()
-	vector := &Vector{homingComponent(position.x, ops.boid.velocity.x, width), homingComponent(position.y, ops.boid.velocity.y, height), "hom"}
-	vector.Scale(homingWeight)
-	ops.velocityChan <- vector
-}
-
-func homingComponent(pos float64, vel float64, dim int) (velocity float64) {
-	fDim := float64(dim)
-	if pos < 0 {
-		velocity = -pos / fDim
-		if vel > 0 {
-			velocity /= vel
-		}
-	} else if pos > fDim {
-		velocity = (fDim - pos) / fDim
-		if vel < 0 {
-			velocity /= -vel
-		}
-	}
-	return
 }

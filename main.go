@@ -11,8 +11,10 @@ import (
 )
 
 const (
-	width  = 320
-	height = 240
+	width   = 320
+	height  = 240
+	fWidth  = float64(width)
+	fHeight = float64(height)
 )
 
 var (
