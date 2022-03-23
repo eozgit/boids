@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	boidCount = 10
+	boidCount = 200
 	op        = &ebiten.DrawImageOptions{}
 	rt        *rtreego.Rtree
 )
@@ -42,8 +42,7 @@ func updateBoid(b *Boid, boidChan chan *Boid, wg *sync.WaitGroup) {
 	velocityCalc := VelocityCalculator{}
 	velocityCalc.calculate(b)
 
-	position := b.position()
-	position.Add(b.velocity)
+	position := b.position().Add(b.velocity)
 	Wrap(position)
 	b.Point = rtreego.Point{position.x, position.y}
 	b.calculateAngle()
