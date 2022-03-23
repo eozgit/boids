@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	boidCount = 50
+	boidCount = 10
 	op        = &ebiten.DrawImageOptions{}
 	rt        *rtreego.Rtree
 )
@@ -19,6 +19,34 @@ var (
 type Game struct {
 	boids []*Boid
 	rt    *rtreego.Rtree
+}
+
+func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
+	defer wg.Done()
+	px := randPostition(width)
+	py := randPostition(height)
+	vx := randVelocity()
+	vy := randVelocity()
+	boid := &Boid{
+		id:       id,
+		velocity: &Vector{vx, vy, "vel"},
+		Point:    rtreego.Point{px, py},
+	}
+	boid.calculateAngle()
+	boidChan <- boid
+}
+
+func updateBoid(b *Boid, boidChan chan *Boid, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	velocityCalc := VelocityCalculator{}
+	velocityCalc.calculate(b)
+
+	position := b.position()
+	position.Add(b.velocity)
+	b.Point = rtreego.Point{position.x, position.y}
+	b.calculateAngle()
+	boidChan <- b
 }
 
 func (g *Game) Update() error {
@@ -29,34 +57,10 @@ func (g *Game) Update() error {
 	actualCount := len(g.boids)
 	for i := 0; i < boidCount; i++ {
 		if i >= actualCount {
-			go func(id int) {
-				defer wg.Done()
-				px := randPostition(width)
-				py := randPostition(height)
-				vx := randVelocity()
-				vy := randVelocity()
-				boid := &Boid{
-					id:       id,
-					velocity: &Vector{vx, vy, "vel"},
-					Point:    rtreego.Point{px, py},
-				}
-				boid.calculateAngle()
-				boidChan <- boid
-			}(i)
+			go createBoid(i, boidChan, &wg)
 		} else {
 			boid := g.boids[i]
-			go func(b *Boid) {
-				defer wg.Done()
-
-				velocityCalc := VelocityCalculator{}
-				velocityCalc.calculate(b)
-
-				position := b.position()
-				position.Add(b.velocity)
-				b.Point = rtreego.Point{position.x, position.y}
-				b.calculateAngle()
-				boidChan <- b
-			}(boid)
+			go updateBoid(boid, boidChan, &wg)
 		}
 	}
 

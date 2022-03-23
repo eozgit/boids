@@ -19,18 +19,18 @@ var (
 	img *ebiten.Image
 )
 
-func loadImage() {
-	var err error
+func loadImage() (err error) {
 	img, _, err = ebitenutil.NewImageFromFile("boid.png")
-	if err != nil {
-		log.Fatal(err)
-	}
+	return
 }
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	loadImage()
+	if err := loadImage(); err != nil {
+		log.Fatal(err)
+		return
+	}
 
 	ebiten.SetWindowSize(width*2, height*2)
 	ebiten.SetWindowTitle("Boids")
