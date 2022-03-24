@@ -1,6 +1,8 @@
 package main
 
-import "github.com/dhconnelly/rtreego"
+import (
+	"github.com/dhconnelly/rtreego"
+)
 
 var rt *rtreego.Rtree
 

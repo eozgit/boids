@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	boidCount = 100
+	boidCount = 60
 	op        = &ebiten.DrawImageOptions{}
 )
 
@@ -27,8 +27,8 @@ func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
 	vy := rand.Float64() - .5
 	boid := &Boid{
 		id:       id,
-		velocity: &Vector{vx, vy, "vel"},
 		Point:    rtreego.Point{px, py},
+		velocity: &Vector{vx, vy},
 	}
 	boid.calculateAngle()
 	boidChan <- boid
@@ -37,8 +37,7 @@ func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
 func updateBoid(b *Boid, boidChan chan *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	velocityCalc := VelocityCalculator{}
-	velocityCalc.calculate(b)
+	b.calculateVelocity()
 
 	position := b.position().Add(b.velocity)
 	Wrap(position)

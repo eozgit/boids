@@ -3,9 +3,8 @@ package main
 import "math"
 
 type Vector struct {
-	x           float64
-	y           float64
-	description string
+	x float64
+	y float64
 }
 
 func (v *Vector) Add(v2 *Vector) *Vector {
