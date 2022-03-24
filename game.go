@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	boidCount = 60
+	boidCount = 100
 	op        = &ebiten.DrawImageOptions{}
 )
 
