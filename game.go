@@ -11,14 +11,12 @@ import (
 )
 
 var (
-	boidCount = 200
+	boidCount = 100
 	op        = &ebiten.DrawImageOptions{}
-	rt        *rtreego.Rtree
 )
 
 type Game struct {
 	boids []*Boid
-	rt    *rtreego.Rtree
 }
 
 func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
@@ -89,7 +87,7 @@ func (g *Game) Update() error {
 		points = append(points, *boid)
 	}
 	g.boids = boids
-	rt = rtreego.NewTree(2, 5, 500, points...)
+	createIndex(points...)
 
 	return nil
 }
@@ -118,9 +116,7 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.White)
 
 	b0, _ := g.getBoidById(0)
-	b0pos := b0.position()
-	re := rtreego.Point{b0pos.x, b0pos.y}.ToRect(separationRange)
-	arr := rt.SearchIntersect(re)
+	arr := search(b0.position(), separationRange)
 
 	for _, boid := range g.boids {
 		op.GeoM.Reset()

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"math"
 	"sync"
-
-	"github.com/dhconnelly/rtreego"
 )
 
 const (
@@ -13,10 +11,10 @@ const (
 )
 
 var (
-	separationRange  = 6.
+	separationRange  = 7.
 	separationWeight = 0.008
-	alignmentRange   = 11.
-	alignmentWeight  = .017
+	alignmentRange   = 10.
+	alignmentWeight  = .03
 )
 
 type velocityMethod func()
@@ -55,7 +53,7 @@ func (calc *VelocityCalculator) separation() {
 	desc := fmt.Sprintf("sep_%d", boidCount)
 	deltaVelocity := &Vector{description: desc}
 	centreOfSearchArea := calc.boid.position().Add(calc.boid.velocity.Limit(1).Scale(separationRange / 2))
-	boidsWithinRange := rt.SearchIntersect(rtreego.Point{centreOfSearchArea.x, centreOfSearchArea.y}.ToRect(separationRange))
+	boidsWithinRange := search(centreOfSearchArea, separationRange)
 	boidCount := len(boidsWithinRange)
 	if boidCount < 2 {
 		calc.velocityChan <- deltaVelocity
@@ -76,7 +74,7 @@ func (calc *VelocityCalculator) separation() {
 func (calc *VelocityCalculator) alignment() {
 	defer calc.wg.Done()
 	position := calc.boid.position()
-	arr := rt.SearchIntersect(rtreego.Point{position.x, position.y}.ToRect(alignmentRange))
+	arr := search(position, alignmentRange)
 	avgVelNei := &Vector{description: "align"}
 	for _, spa := range arr {
 		boid := spa.(Boid)
