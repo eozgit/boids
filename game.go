@@ -1,8 +1,6 @@
 package main
 
 import (
-	"errors"
-	"image/color"
 	"math/rand"
 	"sync"
 
@@ -11,12 +9,14 @@ import (
 )
 
 var (
-	boidCount = 100
-	op        = &ebiten.DrawImageOptions{}
+	boidCount   = 120
+	trailLength = 50
 )
 
 type Game struct {
-	boids []*Boid
+	boids  []*Boid
+	tick   int
+	pixels []byte
 }
 
 func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
@@ -25,28 +25,34 @@ func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
 	py := rand.Float64() * height
 	vx := rand.Float64() - .5
 	vy := rand.Float64() - .5
+	trail := make([]Vector, trailLength)
+	for i := 0; i < trailLength; i++ {
+		trail = append(trail, Vector{px, py})
+	}
 	boid := &Boid{
 		id:       id,
 		Point:    rtreego.Point{px, py},
 		velocity: &Vector{vx, vy},
+		trail:    trail,
 	}
-	boid.calculateAngle()
 	boidChan <- boid
 }
 
-func updateBoid(b *Boid, boidChan chan *Boid, wg *sync.WaitGroup) {
+func updateBoid(boid *Boid, tick int, boidChan chan *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	b.calculateVelocity()
+	position := boid.position()
+	boid.trail[tick%trailLength] = *position
 
-	position := b.position().Add(b.velocity)
-	Wrap(position)
-	b.Point = rtreego.Point{position.x, position.y}
-	b.calculateAngle()
-	boidChan <- b
+	boid.calculateVelocity()
+
+	position = position.Add(boid.velocity)
+	wrap(position)
+	boid.Point = rtreego.Point{position.x, position.y}
+	boidChan <- boid
 }
 
-func Wrap(position *Vector) {
+func wrap(position *Vector) {
 	switch {
 	case position.x < 0:
 		position.x += fWidth
@@ -72,7 +78,7 @@ func (g *Game) Update() error {
 			go createBoid(i, boidChan, &wg)
 		} else {
 			boid := g.boids[i]
-			go updateBoid(boid, boidChan, &wg)
+			go updateBoid(boid, g.tick, boidChan, &wg)
 		}
 	}
 
@@ -88,60 +94,55 @@ func (g *Game) Update() error {
 	g.boids = boids
 	createIndex(points...)
 
+	g.tick++
+
 	return nil
 }
 
-func (g *Game) getBoidById(id int) (*Boid, error) {
-	for _, boid := range g.boids {
-		if boid.id == id {
-			return boid, nil
-		}
+func (g *Game) resetPixels() {
+	for i := range g.pixels {
+		g.pixels[i] = 255
 	}
-	return nil, errors.New("Boid not found.")
 }
 
-func setRGB(matrix *ebiten.ColorM, red int, green int, blue int) {
-	// Reset RGB (not Alpha) 0 forcibly
-	matrix.Scale(0, 0, 0, 1)
+func (g *Game) drawBoid(boid *Boid, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-	// Set color
-	r := float64(red) / 0xff
-	g := float64(green) / 0xff
-	b := float64(blue) / 0xff
-	matrix.Translate(r, g, b, 0)
+	for i := 0; i < trailLength; i++ {
+		trailPosition := boid.trail[(g.tick+i)%trailLength]
+		x := int(trailPosition.x)
+		y := int(trailPosition.y)
+		pixelDataPosition := (y*width + x) * 4
+		value := byte(255 * float64(trailLength-i) / float64(trailLength))
+		g.pixels[pixelDataPosition] = value
+		g.pixels[pixelDataPosition+1] = value
+	}
+	position := boid.position()
+	x := int(position.x)
+	y := int(position.y)
+	pixelDataPosition := (y*width + x) * 4
+	g.pixels[pixelDataPosition] = 0
+	g.pixels[pixelDataPosition+1] = 0
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
-	screen.Fill(color.White)
+	g.resetPixels()
 
-	b0, _ := g.getBoidById(0)
-	arr := search(b0.position(), separationRange)
-
+	var wg sync.WaitGroup
+	wg.Add(len(g.boids))
 	for _, boid := range g.boids {
-		op.GeoM.Reset()
-		op.ColorM.Reset()
-
-		op.GeoM.Rotate(boid.angle)
-
-		position := boid.position()
-		op.GeoM.Translate(position.x, position.y)
-
-		if boid.id == 0 {
-			setRGB(&op.ColorM, 255, 0, 0)
-		} else {
-			for _, spa := range arr {
-				b := spa.(Boid)
-				if boid.id == b.id {
-					setRGB(&op.ColorM, 0, 255, 0)
-					break
-				}
-			}
-		}
-
-		screen.DrawImage(img, op)
+		go g.drawBoid(boid, &wg)
 	}
+	wg.Wait()
+
+	screen.ReplacePixels(g.pixels)
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	return width, height
+}
+
+func NewGame() *Game {
+	pixels := make([]byte, 4*width*height)
+	return &Game{pixels: pixels}
 }

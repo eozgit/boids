@@ -24,13 +24,9 @@ type Boid struct {
 	rtreego.Point
 	id           int
 	velocity     *Vector
-	angle        float64
 	wg           *sync.WaitGroup
 	velocityChan chan *Vector
-}
-
-func (boid *Boid) calculateAngle() {
-	boid.angle = math.Atan2(boid.velocity.y, boid.velocity.x) + math.Pi/2
+	trail        []Vector
 }
 
 func (boid Boid) Bounds() *rtreego.Rect {
