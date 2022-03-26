@@ -20,7 +20,7 @@ func main() {
 
 	ebiten.SetWindowSize(width*2, height*2)
 	ebiten.SetWindowTitle("Boids")
-	if err := ebiten.RunGame(NewGame()); err != nil {
+	if err := ebiten.RunGame(newGame()); err != nil {
 		log.Fatal(err)
 	}
 }

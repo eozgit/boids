@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"math/rand"
 	"sync"
 
 	"github.com/dhconnelly/rtreego"
@@ -12,7 +13,7 @@ var (
 	maxVel           = .5
 	separationRange  = 7.
 	separationWeight = 0.018
-	alignmentRange   = 10.
+	alignmentRange   = 13.
 	alignmentWeight  = .043
 	cohesionRange    = 9.
 	cohesionWeight   = .00006
@@ -54,24 +55,24 @@ func (boid *Boid) calculateVelocity() {
 	boid.wg.Wait()
 	close(boid.velocityChan)
 	for velocity := range boid.velocityChan {
-		boid.velocity = boid.velocity.Add(velocity)
+		boid.velocity = boid.velocity.add(velocity)
 	}
 
-	boid.velocity = boid.velocity.Limit(maxVel)
+	boid.velocity = boid.velocity.limit(maxVel)
 }
 
 func (boid *Boid) separation() {
 	defer boid.wg.Done()
 	velocity := &Vector{}
-	centreOfSearchArea := boid.position().Add(boid.velocity.Limit(1).Scale(separationRange * .3))
+	centreOfSearchArea := boid.position().add(boid.velocity.limit(1).scale(separationRange * .3))
 	neighbours, neighbourCount := getNeighbours(centreOfSearchArea, separationRange, boid.id)
 	if neighbourCount > 0 {
 		for _, neighbour := range neighbours {
-			repel := boid.position().Add(neighbour.position().Negate())
-			repel = repel.Scale(1 / math.Pow(repel.Magnitude(), 1.5))
-			velocity = velocity.Add(repel)
+			repel := boid.position().add(neighbour.position().negate())
+			repel = repel.scale(1 / math.Pow(repel.magnitude(), 1.5))
+			velocity = velocity.add(repel)
 		}
-		velocity = velocity.Scale(separationWeight)
+		velocity = velocity.scale(separationWeight)
 	}
 	boid.velocityChan <- velocity
 }
@@ -82,9 +83,9 @@ func (boid *Boid) alignment() {
 	neighbours, neighbourCount := getNeighbours(boid.position(), alignmentRange, boid.id)
 	if neighbourCount > 0 {
 		for _, neighbour := range neighbours {
-			velocity = velocity.Add(neighbour.velocity)
+			velocity = velocity.add(neighbour.velocity)
 		}
-		velocity = velocity.Scale(1 / float64(neighbourCount)).Scale(alignmentWeight)
+		velocity = velocity.scale(1 / float64(neighbourCount)).scale(alignmentWeight)
 	}
 	boid.velocityChan <- velocity
 }
@@ -96,9 +97,54 @@ func (boid *Boid) cohesion() {
 	if neighbourCount > 0 {
 		neighbourPositions := &Vector{}
 		for _, neighbour := range neighbours {
-			neighbourPositions = neighbourPositions.Add(neighbour.position())
+			neighbourPositions = neighbourPositions.add(neighbour.position())
 		}
-		velocity = neighbourPositions.Scale(1 / float64(neighbourCount)).Add(boid.position().Negate()).Scale(cohesionWeight)
+		velocity = neighbourPositions.scale(1 / float64(neighbourCount)).add(boid.position().negate()).scale(cohesionWeight)
 	}
 	boid.velocityChan <- velocity
+}
+
+func wrap(position *Vector) {
+	switch {
+	case position.x < 0:
+		position.x += fWidth
+	case position.x > fWidth:
+		position.x -= fWidth
+	}
+	switch {
+	case position.y < 0:
+		position.y += fHeight
+	case position.y > fHeight:
+		position.y -= fHeight
+	}
+}
+
+func (boid *Boid) update(tick int) {
+	position := boid.position()
+	boid.trail[tick%trailLength] = *position
+
+	boid.calculateVelocity()
+
+	position = position.add(boid.velocity)
+	wrap(position)
+	boid.Point = rtreego.Point{position.x, position.y}
+}
+
+func newBoid(id int) *Boid {
+	px := rand.Float64() * width
+	py := rand.Float64() * height
+	vx := rand.Float64() - .5
+	vy := rand.Float64() - .5
+
+	trail := make([]Vector, trailLength)
+	for i := 0; i < trailLength; i++ {
+		trail = append(trail, Vector{px, py})
+	}
+
+	return &Boid{
+		id:       id,
+		Point:    rtreego.Point{px, py},
+		velocity: &Vector{vx, vy},
+		trail:    trail,
+	}
 }

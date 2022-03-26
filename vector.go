@@ -7,39 +7,35 @@ type Vector struct {
 	y float64
 }
 
-func (v *Vector) Add(v2 *Vector) *Vector {
+func (v *Vector) add(v2 *Vector) *Vector {
 	return &Vector{
 		x: v.x + v2.x,
 		y: v.y + v2.y,
 	}
 }
 
-func (v *Vector) Scale(factor float64) *Vector {
+func (v *Vector) scale(factor float64) *Vector {
 	return &Vector{
 		x: v.x * factor,
 		y: v.y * factor,
 	}
 }
 
-func (v *Vector) Limit(max float64) *Vector {
-	magnitude := v.Magnitude()
+func (v *Vector) limit(max float64) *Vector {
+	magnitude := v.magnitude()
 	if magnitude > max {
-		return v.Scale(max / magnitude)
+		return v.scale(max / magnitude)
 	}
 	return v
 }
 
-func (v *Vector) Magnitude() float64 {
-	return math.Sqrt(square(v.x) + square(v.y))
+func (v *Vector) magnitude() float64 {
+	return math.Sqrt(math.Pow(v.x, 2) + math.Pow(v.y, 2))
 }
 
-func (v *Vector) Negate() *Vector {
+func (v *Vector) negate() *Vector {
 	return &Vector{
 		x: -v.x,
 		y: -v.y,
 	}
-}
-
-func square(x float64) float64 {
-	return math.Pow(x, 2)
 }
