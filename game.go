@@ -7,9 +7,16 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+const (
+	Width   = 640
+	Height  = 480
+	fWidth  = float64(Width)
+	fHeight = float64(Height)
+)
+
 var (
-	boidCount   = 120
-	trailLength = 50
+	boidCount   = 320
+	trailLength = 40
 )
 
 type Game struct {
@@ -76,19 +83,26 @@ func (g *Game) resetPixels() {
 func (g *Game) drawBoid(boid *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	var wgt sync.WaitGroup
+	wgt.Add(trailLength)
 	for i := 0; i < trailLength; i++ {
-		trailPosition := boid.trail[(g.tick+i)%trailLength]
-		x := int(trailPosition.x)
-		y := int(trailPosition.y)
-		pixelDataPosition := (y*width + x) * 4
-		value := byte(255 * float64(trailLength-i) / float64(trailLength))
-		g.pixels[pixelDataPosition] = value
-		g.pixels[pixelDataPosition+1] = value
+		go func(trailPartIndex int) {
+			defer wgt.Done()
+			trailPosition := boid.trail[(g.tick+trailPartIndex)%trailLength]
+			x := int(trailPosition.x)
+			y := int(trailPosition.y)
+			pixelDataPosition := (y*Width + x) * 4
+			value := byte(255 * float64(trailLength-trailPartIndex) / float64(trailLength))
+			g.pixels[pixelDataPosition] = value
+			g.pixels[pixelDataPosition+1] = value
+		}(i)
 	}
-	position := boid.position()
+	wgt.Wait()
+
+	position := boid.Position()
 	x := int(position.x)
 	y := int(position.y)
-	pixelDataPosition := (y*width + x) * 4
+	pixelDataPosition := (y*Width + x) * 4
 	g.pixels[pixelDataPosition] = 0
 	g.pixels[pixelDataPosition+1] = 0
 }
@@ -107,11 +121,11 @@ func (g *Game) Draw(screen *ebiten.Image) {
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return width, height
+	return Width, Height
 }
 
-func newGame() *Game {
+func NewGame() *Game {
 	boids := make([]*Boid, 0, boidCount)
-	pixels := make([]byte, 4*width*height)
+	pixels := make([]byte, 4*Width*Height)
 	return &Game{boids: boids, pixels: pixels}
 }

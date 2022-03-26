@@ -14,11 +14,11 @@ func search(position *Vector, sideLength float64) []rtreego.Spatial {
 	return tree.SearchIntersect(rtreego.Point{position.x, position.y}.ToRect(sideLength))
 }
 
-func getNeighbours(position *Vector, sideLength float64, boidId int) (neighbours []Boid, neighbourCount int) {
+func GetNeighbours(position *Vector, sideLength float64, boidId int) (neighbours []Boid, neighbourCount int) {
 	spatials := search(position, sideLength)
 	for _, spatial := range spatials {
 		potential := spatial.(Boid)
-		if boidId != potential.id {
+		if boidId != potential.Id {
 			neighbours = append(neighbours, potential)
 		}
 	}
