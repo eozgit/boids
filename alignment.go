@@ -2,7 +2,7 @@ package main
 
 type Alignment struct{}
 
-func (a *Alignment) Delta(boid *Boid) (velocity *Vector) {
+func (_ *Alignment) Delta(boid *Boid) (velocity *Vector) {
 	velocity = &Vector{}
 	neighbours, neighbourCount := GetNeighbours(boid.Position(), alignmentRange, boid.Id)
 	if neighbourCount > 0 {

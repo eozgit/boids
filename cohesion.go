@@ -2,7 +2,7 @@ package main
 
 type Cohesion struct{}
 
-func (c *Cohesion) Delta(boid *Boid) (velocity *Vector) {
+func (_ *Cohesion) Delta(boid *Boid) (velocity *Vector) {
 	velocity = &Vector{}
 	neighbours, neighbourCount := GetNeighbours(boid.Position(), cohesionRange, boid.Id)
 	if neighbourCount > 0 {

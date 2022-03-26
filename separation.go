@@ -6,7 +6,7 @@ import (
 
 type Separation struct{}
 
-func (s *Separation) Delta(boid *Boid) (velocity *Vector) {
+func (_ *Separation) Delta(boid *Boid) (velocity *Vector) {
 	velocity = &Vector{}
 	centreOfSearchArea := boid.Position().Add(boid.Velocity.Limit(1).Scale(separationRange * .3))
 	neighbours, neighbourCount := GetNeighbours(centreOfSearchArea, separationRange, boid.Id)

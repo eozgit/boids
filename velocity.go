@@ -5,10 +5,11 @@ type Velocity interface {
 }
 
 var (
-	separationRange  = 11.
-	separationWeight = 0.017
+	separationRange  = 6.
+	separationWeight = .02
 	alignmentRange   = 19.
-	alignmentWeight  = .02
+	alignmentWeight  = .01
 	cohesionRange    = 19.
-	cohesionWeight   = .001
+	cohesionWeight   = .0004
+	noiseWeight      = .03
 )

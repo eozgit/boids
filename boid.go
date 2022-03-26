@@ -34,6 +34,7 @@ func (boid *Boid) calculateVelocity() {
 		&Separation{},
 		&Alignment{},
 		&Cohesion{},
+		&Noise{},
 	}
 	velocityCalcCount := len(velocityCalcs)
 	boid.velocityChan = make(chan *Vector, velocityCalcCount)
