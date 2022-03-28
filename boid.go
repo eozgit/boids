@@ -9,8 +9,6 @@ import (
 
 const tol = 0.01
 
-var maxVel = .5
-
 type Boid struct {
 	position     rtreego.Point
 	Id           int
@@ -18,6 +16,7 @@ type Boid struct {
 	wg           *sync.WaitGroup
 	velocityChan chan *Vector
 	trail        []Vector
+	params       *Parameters
 }
 
 func (boid Boid) Bounds() *rtreego.Rect {
@@ -52,7 +51,7 @@ func (boid *Boid) calculateVelocity() {
 		boid.Velocity = boid.Velocity.Add(velocity)
 	}
 
-	boid.Velocity = boid.Velocity.Limit(maxVel)
+	boid.Velocity = boid.Velocity.Limit(boid.params.maxVel.value())
 }
 
 func wrap(position *Vector) {
@@ -72,7 +71,7 @@ func wrap(position *Vector) {
 
 func (boid *Boid) update(tick int) {
 	position := boid.Position()
-	boid.trail[tick%trailLength] = *position
+	boid.trail[tick%boid.params.trailLength.value()] = *position
 
 	boid.calculateVelocity()
 
@@ -81,12 +80,37 @@ func (boid *Boid) update(tick int) {
 	boid.position = rtreego.Point{position.x, position.y}
 }
 
-func newBoid(id int) *Boid {
+type TrailPixel struct {
+	pixelIndex  int
+	colourValue byte
+}
+
+func (boid *Boid) getTrailPixels(tick int, trailChan chan *TrailPixel) {
+	var wg sync.WaitGroup
+	trailLength := boid.params.trailLength.value()
+	wg.Add(trailLength)
+	for i := 0; i < trailLength; i++ {
+		go func(trailPartIndex int) {
+			defer wg.Done()
+			trailPosition := boid.trail[(tick+trailPartIndex)%trailLength]
+			x := int(trailPosition.x)
+			y := int(trailPosition.y)
+			pixelIndex := (y*Width + x) * 4
+			colourValue := byte(255 * float64(trailLength-trailPartIndex) / float64(trailLength))
+			trailChan <- &TrailPixel{pixelIndex, colourValue}
+		}(i)
+	}
+	wg.Wait()
+	close(trailChan)
+}
+
+func newBoid(id int, params *Parameters) *Boid {
 	px := rand.Float64() * Width
 	py := rand.Float64() * Height
 	vx := rand.Float64() - .5
 	vy := rand.Float64() - .5
 
+	trailLength := params.trailLength.value()
 	trail := make([]Vector, trailLength)
 	for i := 0; i < trailLength; i++ {
 		trail = append(trail, Vector{px, py})
@@ -97,5 +121,6 @@ func newBoid(id int) *Boid {
 		position: rtreego.Point{px, py},
 		Velocity: &Vector{vx, vy},
 		trail:    trail,
+		params:   params,
 	}
 }

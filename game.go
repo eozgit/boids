@@ -14,20 +14,17 @@ const (
 	fHeight = float64(Height)
 )
 
-var (
-	trailLength = 40
-)
-
 type Game struct {
 	boidCount int
 	boids     []*Boid
 	tick      int
 	pixels    []byte
+	params    *Parameters
 }
 
-func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
+func createBoid(id int, params *Parameters, boidChan chan *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
-	boidChan <- newBoid(id)
+	boidChan <- newBoid(id, params)
 }
 
 func updateBoid(boid *Boid, tick int, boidChan chan *Boid, wg *sync.WaitGroup) {
@@ -44,7 +41,7 @@ func (g *Game) Update() error {
 
 	for i := 0; i < g.boidCount; i++ {
 		if i >= currentCount {
-			go createBoid(i, boidChan, &wg)
+			go createBoid(i, g.params, boidChan, &wg)
 		} else {
 			go updateBoid(g.boids[i], g.tick, boidChan, &wg)
 		}
@@ -83,21 +80,14 @@ func (g *Game) resetPixels() {
 func (g *Game) drawBoid(boid *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	var wgt sync.WaitGroup
-	wgt.Add(trailLength)
-	for i := 0; i < trailLength; i++ {
-		go func(trailPartIndex int) {
-			defer wgt.Done()
-			trailPosition := boid.trail[(g.tick+trailPartIndex)%trailLength]
-			x := int(trailPosition.x)
-			y := int(trailPosition.y)
-			pixelDataPosition := (y*Width + x) * 4
-			value := byte(255 * float64(trailLength-trailPartIndex) / float64(trailLength))
-			g.pixels[pixelDataPosition] = value
-			g.pixels[pixelDataPosition+1] = value
-		}(i)
+	trailChan := make(chan *TrailPixel, g.params.trailLength.value())
+
+	boid.getTrailPixels(g.tick, trailChan)
+
+	for trailPixel := range trailChan {
+		g.pixels[trailPixel.pixelIndex] = trailPixel.colourValue
+		g.pixels[trailPixel.pixelIndex+1] = trailPixel.colourValue
 	}
-	wgt.Wait()
 
 	position := boid.Position()
 	x := int(position.x)
@@ -128,5 +118,5 @@ func NewGame() *Game {
 	boidCount := 320
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
-	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}
+	return &Game{boidCount: boidCount, boids: boids, pixels: pixels, params: newParameters()}
 }
