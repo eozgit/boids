@@ -15,14 +15,14 @@ const (
 )
 
 var (
-	boidCount   = 320
 	trailLength = 40
 )
 
 type Game struct {
-	boids  []*Boid
-	tick   int
-	pixels []byte
+	boidCount int
+	boids     []*Boid
+	tick      int
+	pixels    []byte
 }
 
 func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
@@ -38,11 +38,11 @@ func updateBoid(boid *Boid, tick int, boidChan chan *Boid, wg *sync.WaitGroup) {
 func (g *Game) Update() error {
 	var wg sync.WaitGroup
 	currentCount := len(g.boids)
-	toCreateCount := boidCount - currentCount
+	toCreateCount := g.boidCount - currentCount
 	boidChan := make(chan *Boid, toCreateCount)
-	wg.Add(boidCount)
+	wg.Add(g.boidCount)
 
-	for i := 0; i < boidCount; i++ {
+	for i := 0; i < g.boidCount; i++ {
 		if i >= currentCount {
 			go createBoid(i, boidChan, &wg)
 		} else {
@@ -53,7 +53,7 @@ func (g *Game) Update() error {
 	wg.Wait()
 	close(boidChan)
 
-	points := make([]rtreego.Spatial, 0, boidCount)
+	points := make([]rtreego.Spatial, 0, g.boidCount)
 	for _, boid := range g.boids {
 		points = append(points, *boid)
 	}
@@ -125,7 +125,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func NewGame() *Game {
+	boidCount := 320
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
-	return &Game{boids: boids, pixels: pixels}
+	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}
 }

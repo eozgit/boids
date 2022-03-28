@@ -7,13 +7,12 @@ import (
 	"github.com/dhconnelly/rtreego"
 )
 
-var (
-	tol    = 0.01
-	maxVel = .5
-)
+const tol = 0.01
+
+var maxVel = .5
 
 type Boid struct {
-	rtreego.Point
+	position     rtreego.Point
 	Id           int
 	Velocity     *Vector
 	wg           *sync.WaitGroup
@@ -22,11 +21,11 @@ type Boid struct {
 }
 
 func (boid Boid) Bounds() *rtreego.Rect {
-	return boid.ToRect(tol)
+	return boid.position.ToRect(tol)
 }
 
 func (boid *Boid) Position() *Vector {
-	return &Vector{x: boid.Point[0], y: boid.Point[1]}
+	return &Vector{x: boid.position[0], y: boid.position[1]}
 }
 
 func (boid *Boid) calculateVelocity() {
@@ -79,7 +78,7 @@ func (boid *Boid) update(tick int) {
 
 	position = position.Add(boid.Velocity)
 	wrap(position)
-	boid.Point = rtreego.Point{position.x, position.y}
+	boid.position = rtreego.Point{position.x, position.y}
 }
 
 func newBoid(id int) *Boid {
@@ -95,7 +94,7 @@ func newBoid(id int) *Boid {
 
 	return &Boid{
 		Id:       id,
-		Point:    rtreego.Point{px, py},
+		position: rtreego.Point{px, py},
 		Velocity: &Vector{vx, vy},
 		trail:    trail,
 	}

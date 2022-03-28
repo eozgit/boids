@@ -23,10 +23,10 @@ func (v *Vector) Scale(factor float64) *Vector {
 
 func (v *Vector) Limit(max float64) *Vector {
 	magnitude := v.Magnitude()
-	if magnitude > max {
-		return v.Scale(max / magnitude)
+	if magnitude <= max {
+		return v
 	}
-	return v
+	return v.Scale(max / magnitude)
 }
 
 func (v *Vector) Magnitude() float64 {
