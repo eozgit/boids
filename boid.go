@@ -47,6 +47,7 @@ func (boid *Boid) calculateVelocity() {
 	}
 	boid.wg.Wait()
 	close(boid.velocityChan)
+
 	for velocity := range boid.velocityChan {
 		boid.Velocity = boid.Velocity.Add(velocity)
 	}

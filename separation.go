@@ -10,6 +10,7 @@ var _ Velocity = (*Separation)(nil)
 
 func (_ *Separation) Delta(boid *Boid) *Vector {
 	velocity := &Vector{}
+	separationRange := boid.params.separationRange.value()
 	centreOfSearchArea := boid.Position().Add(boid.Velocity.Limit(1).Scale(separationRange * .3))
 	neighbours, neighbourCount := GetNeighbours(centreOfSearchArea, separationRange, boid.Id)
 	if neighbourCount == 0 {
@@ -22,5 +23,5 @@ func (_ *Separation) Delta(boid *Boid) *Vector {
 		velocity = velocity.Add(repel)
 	}
 
-	return velocity.Scale(separationWeight)
+	return velocity.Scale(boid.params.separationWeight.value())
 }
