@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/dhconnelly/rtreego v1.1.0
+	github.com/gravestench/mathlib v0.0.0-20210913201844-54cd9b7a1e9e
 	github.com/hajimehoshi/ebiten/v2 v2.2.5
 )
 

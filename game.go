@@ -89,8 +89,8 @@ func (g *Game) drawBoid(boid *Boid, wg *sync.WaitGroup) {
 	}
 
 	position := boid.Position()
-	x := int(position.x)
-	y := int(position.y)
+	x := int(position.X)
+	y := int(position.Y)
 	pixelDataPosition := (y*Width + x) * 4
 	g.pixels[pixelDataPosition] = 0
 	g.pixels[pixelDataPosition+1] = 0
@@ -114,7 +114,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func NewGame() *Game {
-	boidCount := 320
+	boidCount := 200
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
 	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}

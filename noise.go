@@ -1,15 +1,19 @@
 package main
 
-import "math/rand"
+import (
+	"math/rand"
+
+	"github.com/gravestench/mathlib"
+)
 
 type Noise struct{}
 
 var _ Velocity = (*Noise)(nil)
 
-func (_ *Noise) Delta(boid *Boid) *Vector {
+func (_ *Noise) Delta(boid *Boid) *mathlib.Vector2 {
 	vx := rand.Float64() - .5
 	vy := rand.Float64() - .5
-	velocity := &Vector{vx, vy}
+	velocity := mathlib.NewVector2(vx, vy)
 	return velocity.Scale(global.params.noiseWeight.value())
 }
 

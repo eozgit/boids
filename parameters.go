@@ -2,7 +2,7 @@ package main
 
 const (
 	step             = .1
-	maxVel           = .5
+	maximumVelocity  = .5
 	separationRange  = 6.
 	separationWeight = .02
 	alignmentRange   = 19.
@@ -14,7 +14,7 @@ const (
 )
 
 type Parameters struct {
-	maxVel           *FloatParam
+	maximumVelocity  *FloatParam
 	separationRange  *FloatParam
 	separationWeight *FloatParam
 	alignmentRange   *FloatParam
@@ -27,7 +27,7 @@ type Parameters struct {
 
 func newParameters() *Parameters {
 	return &Parameters{
-		maxVel:           newFloatParam(maxVel),
+		maximumVelocity:  newFloatParam(maximumVelocity),
 		separationRange:  newFloatParam(separationRange),
 		separationWeight: newFloatParam(separationWeight),
 		alignmentRange:   newFloatParam(alignmentRange),
@@ -58,7 +58,9 @@ func (p *IntParam) increase() {
 }
 
 func (p *IntParam) decrease() {
-	p.field--
+	if p.field > 0 {
+		p.field--
+	}
 }
 
 func newIntParam(value int) *IntParam {
@@ -81,7 +83,9 @@ func (p *FloatParam) increase() {
 }
 
 func (p *FloatParam) decrease() {
-	p.factor -= step
+	if p.factor > step {
+		p.factor -= step
+	}
 }
 
 func newFloatParam(value float64) *FloatParam {
