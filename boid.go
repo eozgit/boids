@@ -10,13 +10,10 @@ import (
 const tol = 0.01
 
 type Boid struct {
-	position     rtreego.Point
-	Id           int
-	Velocity     *Vector
-	wg           *sync.WaitGroup
-	velocityChan chan *Vector
-	trail        []Vector
-	params       *Parameters
+	Id       int
+	position rtreego.Point
+	Velocity *Vector
+	trail    []Vector
 }
 
 func (boid Boid) Bounds() *rtreego.Rect {
@@ -28,31 +25,24 @@ func (boid *Boid) Position() *Vector {
 }
 
 func (boid *Boid) calculateVelocity() {
-	velocityCalcs := []Velocity{
-		&Separation{},
-		&Alignment{},
-		&Cohesion{},
-		&Noise{},
-	}
-	velocityCalcCount := len(velocityCalcs)
-	boid.velocityChan = make(chan *Vector, velocityCalcCount)
+	var velocityChan = make(chan *Vector, global.velocityComponentCount)
 
-	boid.wg = &sync.WaitGroup{}
-	boid.wg.Add(velocityCalcCount)
-	for _, velocityCalc := range velocityCalcs {
-		go func(velCalc Velocity) {
-			defer boid.wg.Done()
-			boid.velocityChan <- velCalc.Delta(boid)
-		}(velocityCalc)
+	var wg sync.WaitGroup
+	wg.Add(global.velocityComponentCount)
+	for _, velocityComponent := range global.velocityComponents {
+		go func(velComp Velocity) {
+			defer wg.Done()
+			velocityChan <- velComp.Delta(boid)
+		}(velocityComponent)
 	}
-	boid.wg.Wait()
-	close(boid.velocityChan)
+	wg.Wait()
+	close(velocityChan)
 
-	for velocity := range boid.velocityChan {
+	for velocity := range velocityChan {
 		boid.Velocity = boid.Velocity.Add(velocity)
 	}
 
-	boid.Velocity = boid.Velocity.Limit(boid.params.maxVel.value())
+	boid.Velocity = boid.Velocity.Limit(global.params.maxVel.value())
 }
 
 func wrap(position *Vector) {
@@ -72,7 +62,7 @@ func wrap(position *Vector) {
 
 func (boid *Boid) update(tick int) {
 	position := boid.Position()
-	boid.trail[tick%boid.params.trailLength.value()] = *position
+	boid.trail[tick%global.params.trailLength.value()] = *position
 
 	boid.calculateVelocity()
 
@@ -86,9 +76,13 @@ type TrailPixel struct {
 	colourValue byte
 }
 
+func newTrailPixel(pixelIndex int, colourValue byte) *TrailPixel {
+	return &TrailPixel{pixelIndex, colourValue}
+}
+
 func (boid *Boid) getTrailPixels(tick int, trailChan chan *TrailPixel) {
 	var wg sync.WaitGroup
-	trailLength := boid.params.trailLength.value()
+	trailLength := global.params.trailLength.value()
 	wg.Add(trailLength)
 	for i := 0; i < trailLength; i++ {
 		go func(trailPartIndex int) {
@@ -98,20 +92,20 @@ func (boid *Boid) getTrailPixels(tick int, trailChan chan *TrailPixel) {
 			y := int(trailPosition.y)
 			pixelIndex := (y*Width + x) * 4
 			colourValue := byte(255 * float64(trailLength-trailPartIndex) / float64(trailLength))
-			trailChan <- &TrailPixel{pixelIndex, colourValue}
+			trailChan <- newTrailPixel(pixelIndex, colourValue)
 		}(i)
 	}
 	wg.Wait()
 	close(trailChan)
 }
 
-func newBoid(id int, params *Parameters) *Boid {
+func newBoid(id int) *Boid {
 	px := rand.Float64() * Width
 	py := rand.Float64() * Height
 	vx := rand.Float64() - .5
 	vy := rand.Float64() - .5
 
-	trailLength := params.trailLength.value()
+	trailLength := global.params.trailLength.value()
 	trail := make([]Vector, trailLength)
 	for i := 0; i < trailLength; i++ {
 		trail = append(trail, Vector{px, py})
@@ -122,6 +116,5 @@ func newBoid(id int, params *Parameters) *Boid {
 		position: rtreego.Point{px, py},
 		Velocity: &Vector{vx, vy},
 		trail:    trail,
-		params:   params,
 	}
 }

@@ -4,19 +4,17 @@ import (
 	"github.com/dhconnelly/rtreego"
 )
 
-var tree *rtreego.Rtree
-
-func createIndex(points ...rtreego.Spatial) {
-	tree = rtreego.NewTree(2, 0, len(points), points...)
+type Spatial struct {
+	tree *rtreego.Rtree
 }
 
-func search(position *Vector, sideLength float64) []rtreego.Spatial {
-	return tree.SearchIntersect(rtreego.Point{position.x, position.y}.ToRect(sideLength))
+func (i *Spatial) search(position *Vector, sideLength float64) []rtreego.Spatial {
+	return i.tree.SearchIntersect(rtreego.Point{position.x, position.y}.ToRect(sideLength))
 }
 
-func GetNeighbours(position *Vector, sideLength float64, boidId int) ([]Boid, int) {
+func (i *Spatial) GetNeighbours(position *Vector, sideLength float64, boidId int) ([]Boid, int) {
 	var neighbours []Boid
-	spatials := search(position, sideLength)
+	spatials := i.search(position, sideLength)
 	for _, spatial := range spatials {
 		neighbour := spatial.(Boid)
 		if boidId == neighbour.Id {
@@ -27,4 +25,10 @@ func GetNeighbours(position *Vector, sideLength float64, boidId int) ([]Boid, in
 	}
 
 	return neighbours, len(neighbours)
+}
+
+func newIndex(points ...rtreego.Spatial) *Spatial {
+	return &Spatial{
+		tree: rtreego.NewTree(2, 0, len(points), points...),
+	}
 }

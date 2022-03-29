@@ -8,6 +8,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+var global = newGlobal()
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 

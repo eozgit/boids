@@ -6,7 +6,7 @@ var _ Velocity = (*Cohesion)(nil)
 
 func (_ *Cohesion) Delta(boid *Boid) *Vector {
 	velocity := &Vector{}
-	neighbours, neighbourCount := GetNeighbours(boid.Position(), boid.params.cohesionRange.value(), boid.Id)
+	neighbours, neighbourCount := global.index.GetNeighbours(boid.Position(), global.params.cohesionRange.value(), boid.Id)
 	if neighbourCount == 0 {
 		return velocity
 	}
@@ -16,5 +16,9 @@ func (_ *Cohesion) Delta(boid *Boid) *Vector {
 		neighbourPositions = neighbourPositions.Add(neighbour.Position())
 	}
 
-	return neighbourPositions.Scale(1 / float64(neighbourCount)).Add(boid.Position().Negate()).Scale(boid.params.cohesionWeight.value())
+	return neighbourPositions.Scale(1 / float64(neighbourCount)).Add(boid.Position().Negate()).Scale(global.params.cohesionWeight.value())
+}
+
+func newCohesion() *Cohesion {
+	return &Cohesion{}
 }

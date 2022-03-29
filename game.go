@@ -19,12 +19,11 @@ type Game struct {
 	boids     []*Boid
 	tick      int
 	pixels    []byte
-	params    *Parameters
 }
 
-func createBoid(id int, params *Parameters, boidChan chan *Boid, wg *sync.WaitGroup) {
+func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
-	boidChan <- newBoid(id, params)
+	boidChan <- newBoid(id)
 }
 
 func updateBoid(boid *Boid, tick int, boidChan chan *Boid, wg *sync.WaitGroup) {
@@ -41,7 +40,7 @@ func (g *Game) Update() error {
 
 	for i := 0; i < g.boidCount; i++ {
 		if i >= currentCount {
-			go createBoid(i, g.params, boidChan, &wg)
+			go createBoid(i, boidChan, &wg)
 		} else {
 			go updateBoid(g.boids[i], g.tick, boidChan, &wg)
 		}
@@ -64,7 +63,7 @@ func (g *Game) Update() error {
 		g.boids = append(g.boids, boids...)
 	}
 
-	createIndex(points...)
+	global.setIndex(newIndex(points...))
 
 	g.tick++
 
@@ -80,7 +79,7 @@ func (g *Game) resetPixels() {
 func (g *Game) drawBoid(boid *Boid, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	trailChan := make(chan *TrailPixel, g.params.trailLength.value())
+	trailChan := make(chan *TrailPixel, global.params.trailLength.value())
 
 	boid.getTrailPixels(g.tick, trailChan)
 
@@ -118,5 +117,5 @@ func NewGame() *Game {
 	boidCount := 320
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
-	return &Game{boidCount: boidCount, boids: boids, pixels: pixels, params: newParameters()}
+	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}
 }
