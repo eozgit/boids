@@ -117,7 +117,7 @@ func (g *Game) addBoid(position *mathlib.Vector2) {
 }
 
 func NewGame() *Game {
-	boidCount := 10
+	boidCount := 200
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
 	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}
