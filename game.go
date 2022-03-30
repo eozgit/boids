@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/dhconnelly/rtreego"
+	"github.com/gravestench/mathlib"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -21,17 +22,8 @@ type Game struct {
 	pixels    []byte
 }
 
-func createBoid(id int, boidChan chan *Boid, wg *sync.WaitGroup) {
-	defer wg.Done()
-	boidChan <- newBoid(id)
-}
-
-func updateBoid(boid *Boid, tick int, boidChan chan *Boid, wg *sync.WaitGroup) {
-	defer wg.Done()
-	boid.update(tick)
-}
-
 func (g *Game) Update() error {
+	g.checkInput()
 	var wg sync.WaitGroup
 	currentCount := len(g.boids)
 	toCreateCount := g.boidCount - currentCount
@@ -39,11 +31,16 @@ func (g *Game) Update() error {
 	wg.Add(g.boidCount)
 
 	for i := 0; i < g.boidCount; i++ {
-		if i >= currentCount {
-			go createBoid(i, boidChan, &wg)
-		} else {
-			go updateBoid(g.boids[i], g.tick, boidChan, &wg)
-		}
+		idx := i
+		go func() {
+			defer wg.Done()
+			if idx >= currentCount {
+				boidChan <- newBoid(idx, nil)
+			} else {
+				boid := g.boids[idx]
+				boid.update(g.tick)
+			}
+		}()
 	}
 
 	wg.Wait()
@@ -113,8 +110,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 	return Width, Height
 }
 
+func (g *Game) addBoid(position *mathlib.Vector2) {
+	boid := newBoid(g.boidCount, position)
+	g.boids = append(g.boids, boid)
+	g.boidCount++
+}
+
 func NewGame() *Game {
-	boidCount := 200
+	boidCount := 10
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
 	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}

@@ -1,7 +1,7 @@
 package main
 
 const (
-	step             = .1
+	step             = .01
 	maximumVelocity  = .5
 	separationRange  = 6.
 	separationWeight = .02
