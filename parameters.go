@@ -10,7 +10,6 @@ const (
 	cohesionRange    = 19.
 	cohesionWeight   = .0004
 	noiseWeight      = .03
-	trailLength      = 40
 )
 
 type Parameters struct {

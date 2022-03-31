@@ -9,8 +9,6 @@ import (
 )
 
 const (
-	Width   = 640
-	Height  = 480
 	fWidth  = float64(Width)
 	fHeight = float64(Height)
 )
@@ -117,7 +115,7 @@ func (g *Game) addBoid(position *mathlib.Vector2) {
 }
 
 func NewGame() *Game {
-	boidCount := 200
+	boidCount := boidCount
 	boids := make([]*Boid, 0, boidCount)
 	pixels := make([]byte, 4*Width*Height)
 	return &Game{boidCount: boidCount, boids: boids, pixels: pixels}
